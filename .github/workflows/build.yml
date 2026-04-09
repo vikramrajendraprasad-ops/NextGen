@@ -1,3 +1,21 @@
+name: Build APK
+on: [push]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
       - name: Unzip project
         run: |
           unzip -o NextGenPlayer.zip
@@ -8,16 +26,24 @@
 
       - name: Fix Kotlin Syntax Error
         run: |
-          # This replaces the broken hyphenated reference with dots
+          # Replaces the broken hyphenated reference with the dot notation Gradle expects
           sed -i 's/libs.ffmpeg-kit-full/libs.ffmpeg.kit.full/g' NextGenPlayer/app/build.gradle.kts
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Install Gradle wrapper
         run: |
           cd NextGenPlayer
-          # Ensure we are in the directory containing 'app' and 'settings.gradle.kts'
           gradle wrapper --gradle-version 8.6
           chmod +x gradlew
 
       - name: Build APK
         working-directory: NextGenPlayer
         run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: NextGenPlayer-debug
+          path: NextGenPlayer/app/build/outputs/apk/debug/app-debug.apk
