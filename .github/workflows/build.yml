@@ -1,0 +1,33 @@
+name: Build APK
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unzip project
+        run: unzip NextGenPlayer.zip
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Make gradlew executable
+        run: chmod +x NextGenPlayer/gradlew
+
+      - name: Add missing CardView dependency
+        run: |
+          sed -i 's/implementation(libs.androidx.constraintlayout)/implementation(libs.androidx.constraintlayout)\n    implementation("androidx.cardview:cardview:1.0.0")/' NextGenPlayer/app/build.gradle.kts
+
+      - name: Build APK
+        working-directory: NextGenPlayer
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: NextGenPlayer-debug
+          path: NextGenPlayer/app/build/outputs/apk/debug/app-debug.apk
