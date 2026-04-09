@@ -1,47 +1,23 @@
-name: Build APK
-on: [push]
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: List files (debug)
-        run: ls -la
-
       - name: Unzip project
         run: |
           unzip -o NextGenPlayer.zip
-          ls -la NextGenPlayer/
+          # If the zip created a double folder, move everything up
+          if [ -d "NextGenPlayer/NextGenPlayer" ]; then
+            cp -r NextGenPlayer/NextGenPlayer/* NextGenPlayer/
+          fi
+
+      - name: Fix Kotlin Syntax Error
+        run: |
+          # This replaces the broken hyphenated reference with dots
+          sed -i 's/libs.ffmpeg-kit-full/libs.ffmpeg.kit.full/g' NextGenPlayer/app/build.gradle.kts
 
       - name: Install Gradle wrapper
         run: |
           cd NextGenPlayer
-          gradle wrapper --gradle-version 8.6 || true
+          # Ensure we are in the directory containing 'app' and 'settings.gradle.kts'
+          gradle wrapper --gradle-version 8.6
           chmod +x gradlew
-
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Add CardView dependency
-        run: |
-          sed -i 's/implementation(libs.androidx.constraintlayout)/implementation(libs.androidx.constraintlayout)\n    implementation("androidx.cardview:cardview:1.0.0")/' NextGenPlayer/app/build.gradle.kts
 
       - name: Build APK
         working-directory: NextGenPlayer
         run: ./gradlew assembleDebug --stacktrace
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: NextGenPlayer-debug
-          path: NextGenPlayer/app/build/outputs/apk/debug/app-debug.apk
